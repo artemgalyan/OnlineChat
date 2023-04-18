@@ -1,11 +1,12 @@
-<button  (click)="this.auth.logout()">Logout</button>
-
-<div id="header">Select chat!</div>
-<div id="chatrooms">
-  <div *ngFor='let room of chatrooms' id="chatroom">
-    <p class="room-info">{{ getRoomName(room) }}</p>
-    <input type="button" value="Join" id="join-button" class="button" (click)="joinChatroom(room.id)"/>
+<div width="100%"><button (click)="this.auth.logout()">Logout</button></div>
+<div style="float: left; width: 50%;">
+    <div id="header">Select chat!</div>
+    <div id="chatrooms">
+    <div *ngFor='let room of chatrooms' id="chatroom">
+      <p class="room-info">{{ getRoomName(room) }}</p>
+      <input type="button" value="Join" id="join-button" class="button" (click)="joinChatroom(room.id)"/>
+    </div>
+    <input type="button" value="+" id="create-chatroom-button" routerLink="create">
   </div>
-  <input type="button" value="+" id="create-chatroom-button" routerLink="create">
-  <router-outlet></router-outlet>
 </div>
+  <div style="float: left; width: 50%;"><router-outlet></router-outlet></div>
