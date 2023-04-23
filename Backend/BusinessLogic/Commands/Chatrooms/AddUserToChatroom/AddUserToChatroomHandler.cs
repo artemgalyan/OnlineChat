@@ -14,14 +14,14 @@ public class AddUserToChatroomHandler : IRequestHandler<AddUserToChatroomCommand
 {
     private readonly IStorageService _storageService;
     private readonly IUserAccessor _userAccessor;
-    private readonly IHubContext<ChatHub> _hubContext;
+    private readonly IChatHubService _chatHubService;
 
     public AddUserToChatroomHandler(IStorageService storageService, IUserAccessor userAccessor,
-        IHubContext<ChatHub> hubContext)
+        IChatHubService chatHubService)
     {
         _storageService = storageService;
         _userAccessor = userAccessor;
-        _hubContext = hubContext;
+        _chatHubService = chatHubService;
     }
 
     public async Task<AddUserToChatroomResponse> Handle(AddUserToChatroomCommand request,
@@ -64,8 +64,7 @@ public class AddUserToChatroomHandler : IRequestHandler<AddUserToChatroomCommand
         }
         var ticket = new ChatroomTicket(user, chatroom);
 
-        var notifyTask =
-            _hubContext.NotifyUserAdded(chatId: chatroom.Id.ToString(), currentUsername, cancellationToken);
+        var notifyTask = _chatHubService.NotifyUserAdded(chatId: chatroom.Id, currentUsername, cancellationToken);
 
         var adding = _storageService.AddChatroomTicketAsync(ticket, cancellationToken);
         await Task.WhenAll(notifyTask, adding);

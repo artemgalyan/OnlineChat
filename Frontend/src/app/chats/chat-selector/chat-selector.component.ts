@@ -4,8 +4,8 @@ import {Constants} from "../../constants";
 import {Router} from "@angular/router";
 import {ChatroomService} from "../shared/services/chatroom.service";
 import {ChatroomInfoBase, ChatType, PrivateChatroomInfo, PublicChatroomInfo} from "../../shared/chatroom";
-import { AuthenticationService } from 'src/app/shared/services/authentication.service';
-import { HubService } from '../shared/services/hub.service';
+import {AuthenticationService} from 'src/app/shared/services/authentication.service';
+import {HubService} from '../shared/services/hub.service';
 
 @Component({
   selector: 'app-chat-selector',
@@ -17,6 +17,7 @@ export class ChatSelectorComponent implements OnInit, OnDestroy {
 
   private readonly timesToUpdateChatrooms: number = 3;
   private timesUpdatedChatrooms: number = 0;
+  private chatId: string = null!;
 
   constructor(private storage: StorageService,
               private router: Router,
@@ -32,7 +33,7 @@ export class ChatSelectorComponent implements OnInit, OnDestroy {
         this.hubService.addOnHandler('PromoteToTop', (chatId: string) => this.handlePromotion(chatId));
       },
       (reason) => {
-          alert(reason)
+        alert(reason)
       })
   }
 
@@ -40,25 +41,16 @@ export class ChatSelectorComponent implements OnInit, OnDestroy {
     this.hubService.breakConnection('PromoteToTop');
   }
 
-  private handlePromotion(toPromoteChatId: string){
-    let chatroomToPromote: ChatroomInfoBase[] = [];
-
-      let tempChatrooms = this.chatrooms.filter((element: ChatroomInfoBase) => {
-        if(element.id === toPromoteChatId){
-          chatroomToPromote.push(element);
-          return false;
-        }
-        return true;
-        })
-        if(chatroomToPromote.length === 0 && this.timesUpdatedChatrooms < this.timesToUpdateChatrooms){
-          this.timesUpdatedChatrooms++;
-          this.updateChatrooms().then(
-            () => this.handlePromotion(toPromoteChatId),
-            (reason) => alert(reason)
-            )
-          return;
-        }
-        this.chatrooms = chatroomToPromote.concat(tempChatrooms);
+  private handlePromotion(toPromoteChatId: string) {
+    let filtered = this.chatrooms.filter(s => s.id == toPromoteChatId);
+    if (filtered.length === 0) {
+      this.chatroomsService.getChatroomInfo(toPromoteChatId)
+        .subscribe(result => this.chatrooms.unshift(result))
+    } else {
+      let chatroom = filtered[0];
+      let index = this.chatrooms.indexOf(chatroom);
+      this.chatrooms.slice(index, 1);
+    }
   }
 
   private updateChatrooms(): Promise<void> {
@@ -72,15 +64,16 @@ export class ChatSelectorComponent implements OnInit, OnDestroy {
       }))
   }
 
-  getRoomName(room: ChatroomInfoBase) : string {
+  getRoomName(room: ChatroomInfoBase): string {
     //console.log('hi!' + room);
     if (room.type == ChatType.Public) {
-      return (room as PublicChatroomInfo).name  + ' ' + room.unreadMessages;;
+      return (room as PublicChatroomInfo).name + ' ' + room.unreadMessages;
     }
-    return 'Private chat with ' + this.getSecondUserForPrivateChat(room as PrivateChatroomInfo)  + ' ' + room.unreadMessages;;
+    return 'Private chat with ' + this.getSecondUserForPrivateChat(room as PrivateChatroomInfo) + ' ' + room.unreadMessages;
   }
 
   public joinChatroom(chatId: string) {
+    this.chatId = chatId;
     this.storage.set(Constants.ChatIdStorageField, chatId);
     this.router.navigate(['chats/chat']);
   }

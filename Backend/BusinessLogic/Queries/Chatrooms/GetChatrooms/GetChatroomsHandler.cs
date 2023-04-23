@@ -27,6 +27,8 @@ public class GetChatroomsHandler : IRequestHandler<GetChatroomsRequest, GetChatr
                                            .Include(t => t.Chatroom)
                                            .ThenInclude(c => c.UserTickets)
                                            .ThenInclude(u => u.User)
+                                           .Include(c => c.Chatroom)
+                                           .ThenInclude(c => c.Messages.OrderByDescending(m => m.SendingTime).Take(1))
                                            .ToListAsync(cancellationToken);
         var result = tickets.Select(ChatroomInfo.Of).ToList();
         result.Sort(SortComparator);
@@ -35,6 +37,14 @@ public class GetChatroomsHandler : IRequestHandler<GetChatroomsRequest, GetChatr
 
     private static int SortComparator(object a, object b)
     {
-        return -(a as ChatroomInfoBase)!.LastMessageTime.CompareTo((b as ChatroomInfoBase)!.LastMessageTime);
+        if ((a as ChatroomInfoBase)!.LastMessage is null)
+        {
+            return 1;
+        }
+        if ((b as ChatroomInfoBase)!.LastMessage is null)
+        {
+            return -1;
+        }
+        return -(a as ChatroomInfoBase)!.LastMessage!.SendingTime.CompareTo((b as ChatroomInfoBase)!.LastMessage!.SendingTime);
     }
 }

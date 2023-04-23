@@ -14,9 +14,7 @@ import { HubService } from '../shared/services/hub.service';
 export class ChatComponent implements OnInit, OnDestroy {
   private backendSender: string = 'Receive';
   private backendGetter: string = 'Connect';
-
   private readonly chatId: string;
-
   public sendMessageError = true;
   public userName: string = '';
 
@@ -36,7 +34,7 @@ export class ChatComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.hubService.breakConnection(this.backendSender);
   }
-  
+
   ngOnInit(): void {
     if(this.chatId == undefined){
       this.router.navigate(['../chats']);
@@ -51,17 +49,6 @@ export class ChatComponent implements OnInit, OnDestroy {
         alert(reason);
         this.router.navigate(["../chats"])
       });
-    
-    // this.hubService.hubConnection.start().then(async () => {
-    //   const response = await this.hubService.hubConnection.invoke('Connect', this.chatId) as ConnectionResponseCode;
-    //   if (response != ConnectionResponseCode.SuccessfullyConnected) {
-    //     ChatComponent.switchResponseCode(response);
-    //     return;
-    //   }
-    // }).catch((error) => {
-    //   alert('Failed to start connection');
-    //   console.log(error);
-    // });
   }
 
   async onSendClicked(): Promise<void> {
@@ -75,13 +62,7 @@ export class ChatComponent implements OnInit, OnDestroy {
       .then()
       .catch(() => alert('Failed to send message'));
 
-    if (value == 0) {
-      this.sendMessageError = false;
-      //ChatComponent.showErrorMessage('Failed to send the message');
-    } else {
-      this.sendMessageError = true;
-      //ChatComponent.hideErrorMessage();
-    }
+    this.sendMessageError = value != 0;
   }
 
   @HostListener('window:popstate', ['$event'])
@@ -115,10 +96,16 @@ export class ChatComponent implements OnInit, OnDestroy {
   // }
 }
 
-export interface Message {
-  sender: String;
-  text: String;
-  sendingTime: Date;
+export class Message {
+  public sender: String = "";
+  public text: String = "";
+  public sendingTime: Date = new Date(Date.now());
+  public status: MessageStatus = MessageStatus.Sent;
+}
+
+export enum MessageStatus {
+  Sent,
+  Pending
 }
 
 enum ConnectionResponseCode {

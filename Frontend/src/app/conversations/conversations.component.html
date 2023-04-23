@@ -1,0 +1,37 @@
+<div class="component">
+  <div class="left-split">
+    <input type="button" value="Create chatroom" (click)="this.router.navigate(['create-new'])" id="create-chatroom-button">
+    <div *ngFor="let chatroom of this.chatrooms" class="chatroom" (click)="setActiveChat(chatroom.id)" id="{{chatroom.id}}">
+      <div class="chatroom-left-part">
+        <p class="chatroom-name">{{ getRoomName(chatroom) }}</p>
+        <p class="last-message">{{ getLastMessage(chatroom) }}</p>
+      </div>
+      <div class="chatroom-right-part">
+        <p
+          class="last-message-time">{{ chatroom.lastMessage === null ? "" : getSendingTime(chatroom.lastMessage.sendingTime) }}</p>
+        <p class="unread-messages" [hidden]="chatroom.unreadMessages == 0"> {{ chatroom.unreadMessages }}</p>
+      </div>
+    </div>
+  </div>
+  <div class="right-split">
+    <div *ngIf="!this.isAnyChatSelected" class="select-chat-wrapper">
+      <div class="select-chat">
+        <p style="margin: 3px">Select chat</p>
+        <input type="button" value="Create new chat" (click)="router.navigate(['create-new'])" class="create-new-chat">
+      </div>
+    </div>
+    <div class="messages-wrap" [hidden]="!this.isAnyChatSelected">
+      <div class="message-input">
+        <input type="text" placeholder="Input the message" class="message-input-box" [(ngModel)]="this.message"
+               (keydown.enter)="sendMessage()">
+        <input type="button" value="Send" class="message-send-box" (click)="sendMessage()" accesskey="enter">
+      </div>
+      <div class="messages" id="messages-block">
+        <div *ngFor='let message of messages;' class="message">
+          <p style="margin: 0;"><b>{{ message.sender }}</b>: {{ message.text }}</p>
+          <p style="align-self: flex-end; margin: 0;">{{ getSendingTime(message.sendingTime) }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -3,7 +3,6 @@ using BusinessLogic.Services.UsersService;
 using Database;
 using Entities.Chatrooms;
 using MediatR;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
 namespace BusinessLogic.Commands.Chatrooms.LeaveChatroom;
@@ -12,14 +11,13 @@ public class LeaveChatroomHandler : IRequestHandler<LeaveChatroomCommand, LeaveC
 {
     private readonly IUserAccessor _userAccessor;
     private readonly IStorageService _storageService;
-    private readonly IHubContext<ChatHub> _hubContext;
+    private readonly IChatHubService _chatHubService;
 
-    public LeaveChatroomHandler(IUserAccessor userAccessor, IStorageService storageService,
-        IHubContext<ChatHub> hubContext)
+    public LeaveChatroomHandler(IUserAccessor userAccessor, IStorageService storageService, IChatHubService chatHubService)
     {
         _userAccessor = userAccessor;
         _storageService = storageService;
-        _hubContext = hubContext;
+        _chatHubService = chatHubService;
     }
 
     public async Task<LeaveChatroomResponse> Handle(LeaveChatroomCommand request, CancellationToken cancellationToken)
@@ -48,7 +46,7 @@ public class LeaveChatroomHandler : IRequestHandler<LeaveChatroomCommand, LeaveC
         if (chat.Kick(user))
         {
             var savingTask = _storageService.SaveChangesAsync(cancellationToken);
-            var sendingTask = _hubContext.NotifyUserLeft(chat.Id.ToString(), user.Username, cancellationToken);
+            var sendingTask = _chatHubService.NotifyUserLeft(chat.Id, user.Username, cancellationToken);
             await Task.WhenAll(savingTask, sendingTask);
             return LeaveChatroomResponse.Success;
         }
@@ -71,7 +69,7 @@ public class LeaveChatroomHandler : IRequestHandler<LeaveChatroomCommand, LeaveC
         chat.ForceKick(user);
         chat.Administrators.Owner = newOwner;
         var saving = _storageService.SaveChangesAsync(cancellationToken);
-        var sending = _hubContext.NotifyUserLeft(chat.Id.ToString(), user.Username, cancellationToken);
+        var sending = _chatHubService.NotifyUserLeft(chat.Id, user.Username, cancellationToken);
         await Task.WhenAll(saving, sending);
         return LeaveChatroomResponse.Success;
     }

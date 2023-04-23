@@ -1,4 +1,5 @@
-﻿using BusinessLogic.Services.UsersService;
+﻿using BusinessLogic.Hubs.Chat;
+using BusinessLogic.Services.UsersService;
 using Database;
 using Entities;
 using Entities.Chatrooms;
@@ -12,12 +13,14 @@ public class CreateChatroomHandler : IRequestHandler<CreateChatroomCommand, Crea
 {
     private readonly IStorageService _storageService;
     private readonly IUserAccessor _userAccessor;
+    private readonly IChatHubService _chatHubService;
 
     public CreateChatroomHandler(IStorageService storageService,
-        IUserAccessor userAccessor)
+        IUserAccessor userAccessor, IChatHubService chatHubService)
     {
         _storageService = storageService;
         _userAccessor = userAccessor;
+        _chatHubService = chatHubService;
     }
 
     public async Task<CreateChatroomResponse> Handle(CreateChatroomCommand request, CancellationToken cancellationToken)
@@ -59,8 +62,10 @@ public class CreateChatroomHandler : IRequestHandler<CreateChatroomCommand, Crea
         Chatroom chatroom = request.Type == ChatType.Public
             ? new PublicChatroom(id, users, owner: creator, name: request.Name!)
             : new PrivateChatroom(id, users);
+        
         await _storageService.AddChatroomAsync(chatroom, cancellationToken);
         await _storageService.SaveChangesAsync(cancellationToken);
+        await _chatHubService.AddChatroom(chatroom, cancellationToken);
         return new CreateChatroomResponse(chatroom.Id);
     }
 

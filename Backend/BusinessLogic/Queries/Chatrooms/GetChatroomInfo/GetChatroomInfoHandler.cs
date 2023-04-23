@@ -23,6 +23,8 @@ public class GetChatroomInfoHandler : IRequestHandler<GetChatroomInfoRequest, ob
         var chatroomTicket = await _storageService.GetChatroomTickets()
                                                   .Include(t => t.Chatroom)
                                                   .ThenInclude(c => c.Users)
+                                                  .Include(c => c.Chatroom)
+                                                  .ThenInclude(c => c.Messages.OrderByDescending(m => m.SendingTime).Take(1))
                                                   .Where(ticket =>
                                                       ticket.ChatroomId == request.ChatId && ticket.UserId == userId)
                                                   .FirstOrDefaultAsync(cancellationToken);

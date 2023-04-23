@@ -29,7 +29,8 @@ public class LoginHandler : IRequestHandler<LoginCommand, LoginResponse>
     {
         var user = await _storageService.GetUsers()
                                         .Where(u => u.Username == command.Username)
-                                        .FirstOrDefaultAsync(cancellationToken);
+                                        .FirstOrDefaultAsync(cancellationToken)
+                                        .ConfigureAwait(false);
         if (user is null)
         {
             return LoginResponse.WrongUsername;

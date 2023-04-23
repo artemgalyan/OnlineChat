@@ -1,12 +1,9 @@
 ﻿using BusinessLogic.Hubs.Chat;
-using BusinessLogic.Services.UsersService;
 using Database;
 using Entities;
 using Entities.Chatrooms;
 using Extensions;
 using MediatR;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
 namespace BusinessLogic.Commands.Chatrooms.KickUserFromChatroom;
@@ -14,15 +11,12 @@ namespace BusinessLogic.Commands.Chatrooms.KickUserFromChatroom;
 public class KickUserFromChatroomHandler : IRequestHandler<KickUserFromChatroomCommand, KickUserFromChatroomResponse>
 {
     private readonly IStorageService _storageService;
-    private readonly IUserAccessor _userAccessor;
-    private readonly IHubContext<ChatHub> _hubContext;
+    private readonly IChatHubService _chatHubService;
 
-    public KickUserFromChatroomHandler(IStorageService storageService, IUserAccessor userAccessor,
-        IHttpContextAccessor accessor, IHubContext<ChatHub> hubContext)
+    public KickUserFromChatroomHandler(IStorageService storageService, IChatHubService chatHubService)
     {
         _storageService = storageService;
-        _userAccessor = userAccessor;
-        _hubContext = hubContext;
+        _chatHubService = chatHubService;
     }
 
     public async Task<KickUserFromChatroomResponse> Handle(KickUserFromChatroomCommand request,
@@ -71,7 +65,7 @@ public class KickUserFromChatroomHandler : IRequestHandler<KickUserFromChatroomC
     {
         chatroom.Kick(user);
         var saving = _storageService.SaveChangesAsync(cancellationToken);
-        var notifying = _hubContext.NotifyUserKicked(chatroom.Id.ToString(), user.Username, cancellationToken);
+        var notifying = _chatHubService.NotifyUserKicked(chatroom.Id, user.Username, cancellationToken);
         await Task.WhenAll(saving, notifying);
         return KickUserFromChatroomResponse.Success;
     }

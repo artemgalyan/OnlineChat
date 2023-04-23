@@ -1,3 +1,5 @@
+import {Message} from "../chats/chat/chat.component";
+
 export enum ChatType {
   Public = 0,
   Private
@@ -7,7 +9,7 @@ export interface ChatroomInfoBase {
   id: string;
   users: string[];
   type: ChatType;
-  lastMessageDate: Date;
+  lastMessage: Message;
   unreadMessages: number;
 }
 

@@ -45,9 +45,13 @@
   display: flex;
   justify-content: left;
   flex-direction: column;
+  background-color: red;
 }
 
 .message {
+  display: flex;
+  flex-direction: row;
+  align-content: space-between;
   text-align: left;
   margin: 1px;
   font-family: 'Arial', serif;
