@@ -1,12 +1,12 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.ComponentModel.DataAnnotations;
 using Entities.Chatrooms;
 
 namespace Entities;
 
 public class ChatroomTicket : IEquatable<ChatroomTicket>
 {
-    public Guid UserId { get; set; }
-    public Guid ChatroomId { get; set; }
+    [Key] public Guid UserId { get; set; }
+    [Key] public Guid ChatroomId { get; set; }
     public User User { get; set; }
     public Chatroom Chatroom { get; set; }
     public int LastMessageRead { get; set; }
@@ -33,8 +33,7 @@ public class ChatroomTicket : IEquatable<ChatroomTicket>
     {
         if (ReferenceEquals(null, obj)) return false;
         if (ReferenceEquals(this, obj)) return true;
-        if (obj.GetType() != this.GetType()) return false;
-        return Equals((ChatroomTicket) obj);
+        return obj.GetType() == GetType() && Equals((ChatroomTicket) obj);
     }
 
     public override int GetHashCode()

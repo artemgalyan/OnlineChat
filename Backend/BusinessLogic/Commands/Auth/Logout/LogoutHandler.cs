@@ -1,21 +1,20 @@
-﻿using MediatR;
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Http;
+﻿using BusinessLogic.Repository;
+using MediatR;
 
 namespace BusinessLogic.Commands.Auth.Logout;
 
 public class LogoutHandler : IRequestHandler<LogoutCommand, Unit>
 {
-    private readonly IHttpContextAccessor _accessor;
+    private readonly IUserTokenRepository _userTokenRepository;
 
-    public LogoutHandler(IHttpContextAccessor accessor)
+    public LogoutHandler(IUserTokenRepository userTokenRepository)
     {
-        _accessor = accessor;
+        _userTokenRepository = userTokenRepository;
     }
 
     public async Task<Unit> Handle(LogoutCommand request, CancellationToken cancellationToken)
     {
-        await _accessor.HttpContext!.SignOutAsync();
+        await _userTokenRepository.DeleteAsync(request.Token, cancellationToken);
         return default;
     }
 }

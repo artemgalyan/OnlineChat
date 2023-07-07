@@ -1,14 +1,15 @@
 ﻿using System.ComponentModel.DataAnnotations.Schema;
 
-namespace Entities.Chatrooms;
+namespace Entities.Chatrooms.PublicChatroom;
 
 [Table(nameof(PublicChatroom))]
 public class PublicChatroom : Chatroom
 {
     public string Name { get; set; }
     public Administrators Administrators { get; set; }
+    public Guid AdministratorsId { get; set; }
 
-    public PublicChatroom(Guid id, List<User> users, User owner, string name) : base(id, ChatType.Public, users)
+    public PublicChatroom(Guid id, List<User> users, User owner, string name) : base(id, users)
     {
         if (!users.Contains(owner))
         {
@@ -53,24 +54,5 @@ public class PublicChatroom : Chatroom
     public void RemoveModerator(User user)
     {
         Administrators.Moderators.Add(user);
-    }
-}
-
-public class Administrators
-{
-    public Guid Id { get; set; } = Guid.NewGuid();
-    public Guid PublicChatroomId { get; set; }
-    public User Owner { get; set; }
-
-    public List<User> Moderators { get; set; }
-    public PublicChatroom PublicChatroom { get; set; }
-
-    public Administrators() {}
-
-    public Administrators(User owner, List<User> moderators, PublicChatroom chatroom)
-    {
-        Owner = owner;
-        Moderators = moderators;
-        PublicChatroom = chatroom;
     }
 }

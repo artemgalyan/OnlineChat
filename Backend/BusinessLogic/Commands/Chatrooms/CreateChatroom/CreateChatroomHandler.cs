@@ -1,31 +1,34 @@
 ﻿using BusinessLogic.Hubs.Chat;
+using BusinessLogic.Repository;
 using BusinessLogic.Services.UsersService;
-using Database;
 using Entities;
 using Entities.Chatrooms;
-using Extensions;
+using Entities.Chatrooms.PublicChatroom;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 
 namespace BusinessLogic.Commands.Chatrooms.CreateChatroom;
 
 public class CreateChatroomHandler : IRequestHandler<CreateChatroomCommand, CreateChatroomResponse>
 {
-    private readonly IStorageService _storageService;
     private readonly IUserAccessor _userAccessor;
     private readonly IChatHubService _chatHubService;
+    private readonly IChatroomRepository _chatroomRepository;
+    private readonly IUserRepository _userRepository;
+    private readonly IChatroomTicketRepository _chatroomTicketRepository;
 
-    public CreateChatroomHandler(IStorageService storageService,
-        IUserAccessor userAccessor, IChatHubService chatHubService)
+    public CreateChatroomHandler(IUserAccessor userAccessor, IChatHubService chatHubService,
+        IChatroomRepository chatroomRepository, IUserRepository userRepository, IChatroomTicketRepository chatroomTicketRepository)
     {
-        _storageService = storageService;
         _userAccessor = userAccessor;
         _chatHubService = chatHubService;
+        _chatroomRepository = chatroomRepository;
+        _userRepository = userRepository;
+        _chatroomTicketRepository = chatroomTicketRepository;
     }
 
     public async Task<CreateChatroomResponse> Handle(CreateChatroomCommand request, CancellationToken cancellationToken)
     {
-        if (request.Usernames.Count != 2 && request.Type != ChatType.Public || request.Usernames.Count == 0)
+        if (request.UserIds.Count != 2 && request.Type != ChatType.Public || request.UserIds.Count == 0)
         {
             return CreateChatroomResponse.Failed;
         }
@@ -34,44 +37,47 @@ public class CreateChatroomHandler : IRequestHandler<CreateChatroomCommand, Crea
             return CreateChatroomResponse.Failed;
         }
 
-        if (request.Usernames.Distinct().Count() != request.Usernames.Count)
+        if (await _userRepository.ContainsAllAsync(request.UserIds, cancellationToken) is false)
         {
             return CreateChatroomResponse.Failed;
         }
-        var username = _userAccessor.GetUsername()!;
-        if (!request.Usernames.Contains(username))
+        if (request.UserIds.Distinct().Count() != request.UserIds.Count || request.UserIds.Contains(Guid.Empty))
+        {
+            return CreateChatroomResponse.Failed;
+        }
+        var userId = _userAccessor.GetId();
+        if (!request.UserIds.Contains(userId))
         {
             return CreateChatroomResponse.Failed;
         }
 
-        var users = await _storageService.GetUsers()
-                                         .Where(u => request.Usernames.Any(n => n == u.Username))
-                                         .Include(u => u.ChatroomTickets)
-                                         .ThenInclude(t => t.Chatroom)
-                                         .ToListAsync(cancellationToken);
 
-        if (users.Count == 2 &&
+        if (request.UserIds.Count == 2 &&
             request.Type == ChatType.Private &&
-            IsDuplicatePrivateChatroom(users[0], users[1]))
+            await IsDuplicatePrivateChatroom(request.UserIds[0], request.UserIds[1], cancellationToken))
         {
             return CreateChatroomResponse.Failed;
         }
 
-        var creator = users.First(u => u.Username == username);
+        var mappedUsers = request.UserIds
+                                 .Select(i => new User { Id = i })
+                                 .ToList();
+        var owner = new User { Id = _userAccessor.GetId() };
         var id = Guid.NewGuid();
         Chatroom chatroom = request.Type == ChatType.Public
-            ? new PublicChatroom(id, users, owner: creator, name: request.Name!)
-            : new PrivateChatroom(id, users);
-        
-        await _storageService.AddChatroomAsync(chatroom, cancellationToken);
-        await _storageService.SaveChangesAsync(cancellationToken);
-        await _chatHubService.AddChatroom(chatroom, cancellationToken);
+            ? new PublicChatroom(id, new List<User>(), owner: owner, name: request.Name!)
+            : new PrivateChatroom(id, mappedUsers);
+
+        await _chatroomRepository.InsertAsync(chatroom, cancellationToken);
+        await _chatHubService.AddChatroomAsync(chatroom, cancellationToken);
+        var tickets = request.UserIds.Select(i =>
+            new ChatroomTicket { ChatroomId = chatroom.Id, LastMessageRead = 0, UserId = i });
+        await _chatroomTicketRepository.InsertAllAsync(tickets, cancellationToken);
         return new CreateChatroomResponse(chatroom.Id);
     }
 
-    private static bool IsDuplicatePrivateChatroom(User first, User second)
+    private async Task<bool> IsDuplicatePrivateChatroom(Guid first, Guid second, CancellationToken cancellationToken)
     {
-        return first.Chatrooms.OfType<PrivateChatroom>()
-                    .Any(c => c.Users.Contains(second));
+        return await _chatroomRepository.GetPrivateChatroomByUsersAsync(first, second, cancellationToken) is not null;
     }
 }

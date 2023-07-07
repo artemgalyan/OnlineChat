@@ -11,6 +11,7 @@ public class UserAccessor : IUserAccessor
     {
         _claimsPrincipal = accessor.HttpContext!.User;
     }
+
     public bool TryGetClaim(string claimName, out string result)
     {
         var claims = _claimsPrincipal.Claims;

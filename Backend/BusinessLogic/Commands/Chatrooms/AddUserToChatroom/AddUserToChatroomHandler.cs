@@ -1,4 +1,5 @@
 ﻿using BusinessLogic.Hubs.Chat;
+using BusinessLogic.Repository;
 using BusinessLogic.Services.UsersService;
 using Database;
 using Entities;
@@ -12,61 +13,57 @@ namespace BusinessLogic.Commands.Chatrooms.AddUserToChatroom;
 
 public class AddUserToChatroomHandler : IRequestHandler<AddUserToChatroomCommand, AddUserToChatroomResponse>
 {
-    private readonly IStorageService _storageService;
-    private readonly IUserAccessor _userAccessor;
+    private readonly IChatroomTicketRepository _chatroomTicketRepository;
+    private readonly IChatroomRepository _chatroomRepository;
     private readonly IChatHubService _chatHubService;
+    private readonly IUserRepository _userRepository;
 
-    public AddUserToChatroomHandler(IStorageService storageService, IUserAccessor userAccessor,
-        IChatHubService chatHubService)
+    public AddUserToChatroomHandler(IUserAccessor userAccessor,
+        IChatHubService chatHubService, IChatroomTicketRepository chatroomTicketRepository,
+        IChatroomRepository chatroomRepository, IUserRepository userRepository)
     {
-        _storageService = storageService;
-        _userAccessor = userAccessor;
         _chatHubService = chatHubService;
+        _chatroomTicketRepository = chatroomTicketRepository;
+        _chatroomRepository = chatroomRepository;
+        _userRepository = userRepository;
     }
 
     public async Task<AddUserToChatroomResponse> Handle(AddUserToChatroomCommand request,
         CancellationToken cancellationToken)
     {
-        var tickets = await _storageService.GetChatroomTickets()
-                                           .Where(t => t.ChatroomId == request.ChatId)
-                                           .Include(t => t.User)
-                                           .Include(t => t.Chatroom)
-                                           .ToListAsync(cancellationToken);
-        if (tickets.Count == 0)
+        var chatroom = await _chatroomRepository.GetByIdAsync(request.ChatId, cancellationToken);
+        if (chatroom is null)
         {
             return AddUserToChatroomResponse.ChatroomDoesntExist;
         }
 
-        var chatroom = tickets.First().Chatroom;
-        if (chatroom.Type == ChatType.Private)
-        {
-            return AddUserToChatroomResponse.ChatIsPrivate;
-        }
+        var user = await _userRepository.GetByIdAsync(request.UserId, cancellationToken);
 
-        var currentUsername = _userAccessor.GetUsername()!;
-        if (!tickets.Contains(u => u.User.Username == currentUsername))
-        {
-            return AddUserToChatroomResponse.AccessDenied;
-        }
-
-        if (tickets.Contains(t => t.User.Username == request.Username))
+        if (await _chatroomTicketRepository.GetByIdAsync((request.UserId, request.ChatId), cancellationToken) is not
+            null)
         {
             return AddUserToChatroomResponse.UserIsAlreadyInTheChat;
         }
 
-        var user = await _storageService.GetUsers()
-                                        .Where(u => u.Username == request.Username)
-                                        .FirstOrDefaultAsync(cancellationToken);
+        if (chatroom is PrivateChatroom)
+        {
+            return AddUserToChatroomResponse.ChatIsPrivate;
+        }
+
+        var ticket = new ChatroomTicket 
+        {
+            UserId = request.UserId, 
+            ChatroomId = request.ChatId, 
+            LastMessageRead = chatroom.MessagesCount,
+        };
 
         if (user is null)
         {
             return AddUserToChatroomResponse.UserDoesntExist;
         }
-        var ticket = new ChatroomTicket(user, chatroom);
 
-        var notifyTask = _chatHubService.NotifyUserAdded(chatId: chatroom.Id, currentUsername, cancellationToken);
-
-        var adding = _storageService.AddChatroomTicketAsync(ticket, cancellationToken);
+        var notifyTask = _chatHubService.NotifyUserAddedAsync(chatId: chatroom.Id, user, cancellationToken);
+        var adding = _chatroomTicketRepository.InsertAsync(ticket, cancellationToken);
         await Task.WhenAll(notifyTask, adding);
         return AddUserToChatroomResponse.Success;
     }

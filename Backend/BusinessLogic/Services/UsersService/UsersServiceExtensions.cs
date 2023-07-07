@@ -13,26 +13,17 @@ public static class UsersServiceExtensions
         return value;
     }
 
-    public static string? GetUsername(this IUserAccessor userAccessor)
+    public static string GetUsername(this IUserAccessor userAccessor)
     {
-        return userAccessor.GetClaim(Claims.Name);
+        return userAccessor.GetClaim(Claims.Name)!;
     }
 
-    public static Guid? GetToken(this IUserAccessor userAccessor)
-    {
-        if (Guid.TryParse(userAccessor.GetClaim(Claims.Token), out var token))
-        {
-            return token;
-        }
-        return null;
-    }
-
-    public static Guid? GetId(this IUserAccessor userAccessor)
+    public static Guid GetId(this IUserAccessor userAccessor)
     {
         if (userAccessor.TryGetClaim(Claims.UserId, out var id))
         {
-            return Guid.Parse(id);
+            return Guid.Parse(id)!;
         }
-        return null;
+        return Guid.Empty;
     }
 }

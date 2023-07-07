@@ -3,7 +3,7 @@
 public enum RegistrationResponse
 {
     Success = 0,
-    DuplicateUsername,
+    DuplicateLogin,
     Error
 }
 

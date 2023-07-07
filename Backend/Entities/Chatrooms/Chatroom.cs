@@ -10,11 +10,10 @@ public abstract class Chatroom : IEquatable<Chatroom>
     [NotMapped] public IEnumerable<User> Users => UserTickets.Select(t => t.User);
     [NotMapped] public int UsersCount => UserTickets.Count;
     public int MessagesCount { get; set; }
-    public ChatType Type { get; }
     public DateTime LastMessageTime { get; set; }
     public List<Message> Messages { get; internal set; }
-    private static Message ChatCreatedMessage => new Message("", "The chat was created");
-    public Chatroom(Guid id, ChatType type, List<User> users)
+    private static Message ChatCreatedMessage => new(Guid.Empty, "The chat was created");
+    public Chatroom(Guid id, List<User> users)
     {
         if (users.Count == 0)
         {
@@ -22,7 +21,6 @@ public abstract class Chatroom : IEquatable<Chatroom>
         }
         
         Id = id;
-        Type = type;
         MessagesCount = 0;
         Messages = new List<Message> { ChatCreatedMessage };
         LastMessageTime = DateTime.Now;
@@ -30,18 +28,6 @@ public abstract class Chatroom : IEquatable<Chatroom>
     }
 
     protected Chatroom() {}
-
-    public bool IsEmpty()
-    {
-        return UserTickets.Count == 0;
-    }
-
-    public void AddMessage(Message message)
-    {
-        Messages.Add(message);
-        ++MessagesCount;
-        LastMessageTime = DateTime.Now;
-    }
 
     public bool Equals(Chatroom? other)
     {

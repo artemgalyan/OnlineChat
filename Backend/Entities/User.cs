@@ -9,25 +9,15 @@ namespace Entities;
 /// </summary>
 public class User : IEquatable<User>
 {
-    public Guid Id { get; set; }
-    public string Username { get; set; } = string.Empty;
+    [Key] public Guid Id { get; set; }
+    public string Login { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string Surname { get; set; } = string.Empty;
+    [NotMapped] public string FullName => string.Join(' ', Name, Surname); 
     public string Password { get; set; } = string.Empty;
     public List<ChatroomTicket> ChatroomTickets { get; set; } = new();
     [NotMapped] public IEnumerable<Chatroom> Chatrooms => ChatroomTickets.Select(t => t.Chatroom);
     public string Role { get; set; } = "User";
-    public Guid Token { get; set; } = Guid.NewGuid();
-
-    public void UpdateToken()
-    {
-        Token = Guid.NewGuid();
-    }
-
-    public User(string username, string password)
-    {
-        Id = Guid.NewGuid();
-        Username = username;
-        Password = password;
-    }
 
     public User() {}
 
@@ -35,19 +25,20 @@ public class User : IEquatable<User>
     {
         if (ReferenceEquals(null, obj)) return false;
         if (ReferenceEquals(this, obj)) return true;
-        return obj.GetType() == GetType() && Equals((User) obj);
-    }
-
-    public override int GetHashCode()
-    {
-        return HashCode.Combine(Username);
+        if (obj.GetType() != GetType()) return false;
+        return Equals((User) obj);
     }
 
     public bool Equals(User? other)
     {
         if (ReferenceEquals(null, other)) return false;
         if (ReferenceEquals(this, other)) return true;
-        return Username == other.Username;
+        return Login == other.Login && Name == other.Name && Surname == other.Surname && Role == other.Role;
+    }
+
+    public override int GetHashCode()
+    {
+        return HashCode.Combine(Login, Name, Surname, Role);
     }
 
     public static bool operator ==(User a, User b)

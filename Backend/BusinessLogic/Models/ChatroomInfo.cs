@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using Entities;
 using Entities.Chatrooms;
+using Entities.Chatrooms.PublicChatroom;
 
 namespace BusinessLogic.Models;
 

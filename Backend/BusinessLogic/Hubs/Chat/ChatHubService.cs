@@ -32,7 +32,7 @@ public class ChatHubService : IChatHubService
     /// <param name="chatId"></param>
     /// <param name="message"></param>
     /// <param name="cancellationToken"></param>
-    public async Task Send(Guid chatId, string message, CancellationToken cancellationToken)
+    public async Task SendAsync(Guid chatId, string message, CancellationToken cancellationToken)
     {
         var username = _userAccessor.GetUsername()!;
         var chatroom = await _storageService.GetChatrooms()
@@ -65,7 +65,7 @@ public class ChatHubService : IChatHubService
         return NotifyAll(chatId, $"User ${username} left the chat", cancellationToken);
     }
 
-    public Task AddChatroom(Chatroom chatroom, CancellationToken cancellationToken)
+    public Task AddChatroomAsync(Chatroom chatroom, CancellationToken cancellationToken)
     {
         var users = chatroom.Users
                             .Select(u => _tracker.GetInfo(u.Username))

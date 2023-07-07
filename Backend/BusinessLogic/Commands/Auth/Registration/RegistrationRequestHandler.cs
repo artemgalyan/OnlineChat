@@ -1,38 +1,39 @@
-﻿using Database;
+﻿using BusinessLogic.Repository;
 using Entities;
-using Extensions;
 using MediatR;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 
 namespace BusinessLogic.Commands.Auth.Registration;
 
 public class RegistrationRequestHandler : IRequestHandler<RegistrationCommand, RegistrationResponse>
 {
-    private readonly IStorageService _storageService;
+    private readonly IUserRepository _userRepository;
     private readonly IPasswordHasher<User> _passwordHasher;
 
-    public RegistrationRequestHandler(IStorageService storageService, IPasswordHasher<User> passwordHasher)
+    public RegistrationRequestHandler(IPasswordHasher<User> passwordHasher, IUserRepository userRepository)
     {
-        _storageService = storageService;
         _passwordHasher = passwordHasher;
+        _userRepository = userRepository;
     }
 
     public async Task<RegistrationResponse> Handle(RegistrationCommand command, CancellationToken cancellationToken)
     {
-        if (command.Password.Length < Constants.Security.MinPasswordLength)
+        if (await _userRepository.GetByLoginAsync(command.Login, cancellationToken) is not null)
         {
-            return RegistrationResponse.Error;
-        }
-        if (await _storageService.GetUsers().Where(u => u.Username == command.Username).AnyAsync(cancellationToken))
-        {
-            return RegistrationResponse.DuplicateUsername;
+            return RegistrationResponse.DuplicateLogin;
         }
 
-        var user = new User(command.Username, command.Password);
+        var user = new User 
+        {
+            Id = Guid.NewGuid(),
+            Login = command.Login,
+            Name = command.Name,
+            Surname = command.Surname,
+            Password = ""
+        };
         var password = _passwordHasher.HashPassword(user, command.Password);
         user.Password = password;
-        await _storageService.AddUserAsync(user, cancellationToken);
+        await _userRepository.InsertAsync(user, cancellationToken);
         return RegistrationResponse.Success;
     }
 }

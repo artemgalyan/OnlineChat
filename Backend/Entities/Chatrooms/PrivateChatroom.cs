@@ -5,9 +5,9 @@ namespace Entities.Chatrooms;
 [Table(nameof(PrivateChatroom))]
 public class PrivateChatroom : Chatroom
 {
-    public PrivateChatroom(Guid id, User a, User b) : base(id, ChatType.Private, new List<User> { a, b }) {}
+    public PrivateChatroom(Guid id, User a, User b) : base(id, new List<User> { a, b }) {}
 
-    public PrivateChatroom(Guid id, List<User> users) : base(id, ChatType.Private, users)
+    public PrivateChatroom(Guid id, List<User> users) : base(id, users)
     {
         if (users.Count != 2)
         {

@@ -14,7 +14,7 @@ public class SendMessageHandler : IRequestHandler<SendMessageRequest, Unit>
 
     public async Task<Unit> Handle(SendMessageRequest request, CancellationToken cancellationToken)
     {
-        await _chatHubService.Send(request.ChatId, request.Text, cancellationToken);
+        await _chatHubService.SendAsync(request.ChatId, request.Text, cancellationToken);
         return default;
     }
 }

@@ -12,7 +12,7 @@ public static class ListExtensions
     /// <typeparam name="T"></typeparam>
     /// <returns>true, if collection contains such element, otherwise false</returns>
     public static bool Contains<T>(this IEnumerable<T> list, Func<T, bool> pred)
-        => list.FirstOrDefault(pred) != null;
+        => list.FirstOrDefault(pred) is not null;
 
     /// <summary>
     /// 

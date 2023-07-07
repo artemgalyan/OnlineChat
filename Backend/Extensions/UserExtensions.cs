@@ -1,5 +1,6 @@
 ﻿using Entities;
 using Entities.Chatrooms;
+using Entities.Chatrooms.PublicChatroom;
 
 namespace Extensions;
 

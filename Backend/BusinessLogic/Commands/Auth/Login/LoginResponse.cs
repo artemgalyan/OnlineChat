@@ -1,8 +1,7 @@
 ﻿namespace BusinessLogic.Commands.Auth.Login;
 
-public enum LoginResponse
+public class LoginResponse
 {
-    Success = 0,
-    WrongPassword,
-    WrongUsername
+    public string AuthToken { get; set; }
+    public Guid UserId { get; set; }
 }

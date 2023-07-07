@@ -4,7 +4,7 @@ using Constants;
 using Entities;
 using Microsoft.AspNetCore.Identity;
 
-namespace OnlineChat;
+namespace BusinessLogic.Services;
 
 public class PasswordHasher : IPasswordHasher<User>
 {

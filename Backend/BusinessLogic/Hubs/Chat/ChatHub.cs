@@ -77,7 +77,7 @@ public class ChatHub : Hub<IChatClientInterface>
     {
         return !Guid.TryParse(chatId, out var id)
             ? Task.CompletedTask
-            : _chatHubService.Send(id, message, CancellationToken.None);
+            : _chatHubService.SendAsync(id, message, CancellationToken.None);
     }
 
     [Authorize(AuthenticationSchemes = Schemes.DefaultCookieScheme)]

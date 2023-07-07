@@ -1,72 +1,84 @@
 ﻿using BusinessLogic.Hubs.Chat;
-using Database;
-using Entities;
+using BusinessLogic.Repository;
+using BusinessLogic.Services.UsersService;
 using Entities.Chatrooms;
-using Extensions;
+using Entities.Chatrooms.PublicChatroom;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 
 namespace BusinessLogic.Commands.Chatrooms.KickUserFromChatroom;
 
 public class KickUserFromChatroomHandler : IRequestHandler<KickUserFromChatroomCommand, KickUserFromChatroomResponse>
 {
-    private readonly IStorageService _storageService;
+    private const int UserRole = 0;
+    private const int ModeratorRole = 1;
+    private const int OwnerRole = 2;
+    private readonly IUserAccessor _userAccessor;
+    private readonly IChatroomTicketRepository _chatroomTicketRepository;
     private readonly IChatHubService _chatHubService;
+    private readonly IAdministratorsRepository _administratorsRepository;
+    private readonly IChatroomRepository _chatroomRepository;
+    private readonly IUserAdministratorRepository _userAdministratorRepository;
+    private readonly IUserRepository _userRepository;
 
-    public KickUserFromChatroomHandler(IStorageService storageService, IChatHubService chatHubService)
+    public KickUserFromChatroomHandler(IChatHubService chatHubService,
+        IChatroomTicketRepository chatroomTicketRepository, IAdministratorsRepository administratorsRepository, IChatroomRepository chatroomRepository, IUserAdministratorRepository userAdministratorRepository, IUserAccessor userAccessor, IUserRepository userRepository)
     {
-        _storageService = storageService;
         _chatHubService = chatHubService;
+        _chatroomTicketRepository = chatroomTicketRepository;
+        _administratorsRepository = administratorsRepository;
+        _chatroomRepository = chatroomRepository;
+        _userAdministratorRepository = userAdministratorRepository;
+        _userAccessor = userAccessor;
+        _userRepository = userRepository;
     }
 
     public async Task<KickUserFromChatroomResponse> Handle(KickUserFromChatroomCommand request,
         CancellationToken cancellationToken)
     {
-        var ticket = await _storageService.GetChatroomTickets()
-                                          .Include(t => t.User)
-                                          .Where(t => t.User.Username == request.Username &&
-                                                      t.ChatroomId == request.ChatId)
-                                          .Include(t => t.Chatroom)
-                                          .FirstOrDefaultAsync(cancellationToken);
-
+        if (request.UserId == _userAccessor.GetId())
+        {
+            return KickUserFromChatroomResponse.AccessDenied;
+        }
+        var ticket = await _chatroomTicketRepository.GetByIdAsync((request.UserId, request.ChatId), cancellationToken);
         if (ticket is null)
         {
             return KickUserFromChatroomResponse.BadRequest;
         }
-        
-        var chatroom = ticket.Chatroom;
-        var user = ticket.User;
 
-        if (!chatroom.Users.Contains(user))
-        {
-            return KickUserFromChatroomResponse.BadRequest;
-        }
-
-        var toKick = chatroom.Users.FirstOrDefault(u => u.Username == request.Username);
-        if (toKick is null)
-        {
-            return KickUserFromChatroomResponse.UserIsNotInChatroom;
-        }
-
-        var chat = (chatroom as PublicChatroom)!;
-        if (toKick.IsOwnerOf(chat))
+        if (await _chatroomRepository.GetByIdAsync(request.ChatId, cancellationToken) is PrivateChatroom)
         {
             return KickUserFromChatroomResponse.AccessDenied;
         }
-        if (user.IsOwnerOf(chat) || user.IsModeratorOf(chat) && !toKick.IsModeratorOf(chat))
+
+        var administrators = await _administratorsRepository.GetByChatroomId(request.ChatId, cancellationToken);
+        var selfRole = await GetRoleAsync(_userAccessor.GetId(), request.ChatId, administrators!, cancellationToken);
+        if (selfRole == 0)
         {
-            return await Kick(chat, toKick, cancellationToken);
+            return KickUserFromChatroomResponse.AccessDenied;
         }
-        return KickUserFromChatroomResponse.AccessDenied;
+        var otherRole = await GetRoleAsync(request.UserId, request.ChatId, administrators!, cancellationToken);
+        if (otherRole >= selfRole)
+        {
+            return KickUserFromChatroomResponse.AccessDenied;
+        }
+
+        var kickedUser = await _userRepository.GetByIdAsync(request.UserId, cancellationToken);
+        var kicking = _chatroomTicketRepository.DeleteAsync((request.UserId, request.ChatId), cancellationToken);
+        var notifying = _chatHubService.NotifyUserKickedAsync(request.ChatId, kickedUser!, cancellationToken);
+        await Task.WhenAll(kicking, notifying);
+        return KickUserFromChatroomResponse.Success;
     }
 
-    private async Task<KickUserFromChatroomResponse> Kick(PublicChatroom chatroom, User user,
-        CancellationToken cancellationToken)
+    private async Task<int> GetRoleAsync(Guid userId, Guid chatId, Administrators administrators, CancellationToken cancellationToken)
     {
-        chatroom.Kick(user);
-        var saving = _storageService.SaveChangesAsync(cancellationToken);
-        var notifying = _chatHubService.NotifyUserKicked(chatroom.Id, user.Username, cancellationToken);
-        await Task.WhenAll(saving, notifying);
-        return KickUserFromChatroomResponse.Success;
+        if (administrators.OwnerId == userId)
+        {
+            return OwnerRole;
+        }
+        if (await _userAdministratorRepository.GetByIdAsync((userId, administrators.Id), cancellationToken) is not null)
+        {
+            return ModeratorRole;
+        }
+        return UserRole;
     }
 }

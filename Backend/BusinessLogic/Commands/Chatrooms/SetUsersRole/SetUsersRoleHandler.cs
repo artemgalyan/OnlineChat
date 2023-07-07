@@ -1,6 +1,7 @@
 ﻿using BusinessLogic.Services.UsersService;
 using Database;
 using Entities.Chatrooms;
+using Entities.Chatrooms.PublicChatroom;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 

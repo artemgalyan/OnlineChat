@@ -2,6 +2,7 @@
 using BusinessLogic.Services.UsersService;
 using Database;
 using Entities.Chatrooms;
+using Entities.Chatrooms.PublicChatroom;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -46,7 +47,7 @@ public class LeaveChatroomHandler : IRequestHandler<LeaveChatroomCommand, LeaveC
         if (chat.Kick(user))
         {
             var savingTask = _storageService.SaveChangesAsync(cancellationToken);
-            var sendingTask = _chatHubService.NotifyUserLeft(chat.Id, user.Username, cancellationToken);
+            var sendingTask = _chatHubService.NotifyUserLeftAsync(chat.Id, user.Username, cancellationToken);
             await Task.WhenAll(savingTask, sendingTask);
             return LeaveChatroomResponse.Success;
         }
@@ -69,7 +70,7 @@ public class LeaveChatroomHandler : IRequestHandler<LeaveChatroomCommand, LeaveC
         chat.ForceKick(user);
         chat.Administrators.Owner = newOwner;
         var saving = _storageService.SaveChangesAsync(cancellationToken);
-        var sending = _chatHubService.NotifyUserLeft(chat.Id, user.Username, cancellationToken);
+        var sending = _chatHubService.NotifyUserLeftAsync(chat.Id, user.Username, cancellationToken);
         await Task.WhenAll(saving, sending);
         return LeaveChatroomResponse.Success;
     }
